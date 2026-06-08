@@ -1604,6 +1604,14 @@ Verwelkom de deelnemer en introduceer het scenario. Geef een korte schets van de
               <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="radio" name="al-mode" value="strict" onchange="setAlarmMode('strict')"> <span id="al-mode-strict">Strikt — uitsluitend alarmen uit de lijst</span></label>
             </div>
           </div>
+          <div class="fr fr1" style="margin-bottom:8px">
+            <div class="fd" style="flex-direction:row;align-items:center;gap:8px">
+              <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+                <input type="checkbox" id="al-classify" onchange="setAlarmClassify(this.checked)">
+                <span id="al-classify-lbl">Classificatie-stap bij bevestigen — deelnemer kiest proces/systeem (vergeleken met de klasse uit de lijst)</span>
+              </label>
+            </div>
+          </div>
           <div id="alarms-list"></div>
         </div>
 
@@ -1978,7 +1986,7 @@ function defSc() {
       {id:'r1', name:'NAAM', type:'dispatch', behavior:'', primary:true,  _open:false},
       {id:'r2', name:'NAAM', type:'field',    behavior:'', primary:false, _open:false}
     ],
-    alarmList:[], alarmListMode:'soft',
+    alarmList:[], alarmListMode:'soft', alarmClassifyStep:false,
     difficulty:3, aiExtra:'',
     settings:{debriefDelay:false},
     participant:{},
@@ -2284,7 +2292,7 @@ function buildCompanyContextPrompt(profileId) {
 
 // Repertoireblok voor het systeem-prompt: rendert de scenario-alarmlijst (WP2).
 // Levert (a) repertoire + (b) vaste regels + (c) modus-regel; leeg als de lijst leeg is.
-// [DCS-HERSTEL] wordt hier nog NIET geïnstrueerd — dat hoort bij WP3 (player-afhandeling).
+// Bevat de [DCS-HERSTEL]-instructie (oorzaak weggenomen → alarm terug naar normaal; WP3).
 function buildAlarmRepertoirePrompt(){
   const list = Array.isArray(cur.alarmList)
     ? cur.alarmList.filter(a => a && (a.tag || a.omschrijving)) : [];
@@ -2310,6 +2318,7 @@ function buildAlarmRepertoirePrompt(){
   out.push('- Stuur een alarm op een aparte regel met exact dit format:');
   out.push('  [DCS-ALARM] TAG | OMSCHRIJVING | PRIORITEIT: GEEL/ORANJE/ROOD | KLASSE: PROCES/SYSTEEM');
   out.push('- Neem prioriteit en klasse exact over uit de lijst; wijzig ze niet.');
+  out.push('- Zodra de deelnemer de juiste corrigerende actie uitvoert die de oorzaak van een alarm wegneemt (zie "Oorzaak weggenomen door"), stuur je op een aparte regel: [DCS-HERSTEL] TAG. Doe dit NIET wanneer de deelnemer het alarm alleen bevestigt maar de oorzaak niet aanpakt — dan blijft het alarm actief.');
   out.push('- Stuur per beurt maximaal één DCS-alarm.');
   if(cur.alarmListMode === 'strict'){
     out.push('- MODUS: STRIKT. Gebruik UITSLUITEND alarmen uit het bovenstaande repertoire. Verzin geen andere alarmen, ook niet bij verdere escalatie.');
@@ -2603,6 +2612,8 @@ function renderAlarms(){
   // Modus-radio's bijwerken
   const mode = cur.alarmListMode==='strict' ? 'strict' : 'soft';
   document.querySelectorAll('input[name="al-mode"]').forEach(r => { r.checked = (r.value===mode); });
+  const clsEl = document.getElementById('al-classify');
+  if (clsEl) clsEl.checked = !!cur.alarmClassifyStep;
 
   const c = document.getElementById('alarms-list');
   if(!c) return;
@@ -2651,6 +2662,8 @@ function remAlarm(i){ cur.alarmList.splice(i,1); renderAlarms(); dirty(); }
 function updateAlarm(i,field,val){ cur.alarmList[i][field] = val; dirty(); }
 
 function setAlarmMode(mode){ cur.alarmListMode = (mode==='strict')?'strict':'soft'; dirty(); }
+
+function setAlarmClassify(on){ cur.alarmClassifyStep = !!on; dirty(); }
 
 // ═══════════════════════════════════════════════
 // ROLLEN
@@ -2991,6 +3004,7 @@ Zodra de briefing is afgerond en de deelnemer gereed is, stuur je [FASE:1] op ee
       systemPromptExtra: combinedPrompt,
       debriefingPrompt: cur.debriefingPrompt?.trim() || '',
       alarmListMode: (cur.alarmListMode==='strict') ? 'strict' : 'soft',
+      alarmClassifyStep: !!cur.alarmClassifyStep,
       alarmList: Array.isArray(cur.alarmList)
         ? cur.alarmList.filter(a => a && (a.tag || a.omschrijving)).map(a => ({
             id: a.id || ('al'+Math.random().toString(36).slice(2,8)),
@@ -3168,6 +3182,7 @@ function handleImport(ev){
         roles,
         alarmList:        Array.isArray(sc.alarmList) ? sc.alarmList : [],
         alarmListMode:    (sc.alarmListMode==='strict') ? 'strict' : 'soft',
+        alarmClassifyStep: !!sc.alarmClassifyStep,
         difficulty:       diff,
         aiExtra,
         settings:         sc.settings||{escalation:true,debriefDelay:false},
