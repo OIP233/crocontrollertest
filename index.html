@@ -2311,6 +2311,7 @@ function buildAlarmRepertoirePrompt(){
     if(a.herstelactie) out.push(`  Oorzaak weggenomen door: ${a.herstelactie}`);
     if(a.fase)         out.push(`  [Fase: ${a.fase}]`);
     if(a.context)      out.push(`  [Toelichting: ${a.context}]`);
+    if(a.kantelpunt)   out.push(`  [KANTELPUNT: beslissend voor escalatie/de-escalatie]`);
   });
   out.push('');
   out.push('REGELS VOOR ALARMEN:');
@@ -2319,7 +2320,11 @@ function buildAlarmRepertoirePrompt(){
   out.push('  [DCS-ALARM] TAG | OMSCHRIJVING | PRIORITEIT: GEEL/ORANJE/ROOD | KLASSE: PROCES/SYSTEEM');
   out.push('- Neem prioriteit en klasse exact over uit de lijst; wijzig ze niet.');
   out.push('- Zodra de deelnemer de juiste corrigerende actie uitvoert die de oorzaak van een alarm wegneemt (zie "Oorzaak weggenomen door"), stuur je op een aparte regel: [DCS-HERSTEL] TAG. Doe dit NIET wanneer de deelnemer het alarm alleen bevestigt maar de oorzaak niet aanpakt — dan blijft het alarm actief.');
+  out.push('- Laat escalatie en de-escalatie afhangen van de WERKELIJKE alarmafhandeling, niet van de tijd. Een alarm dat onbevestigd blijft, of wel bevestigd maar niet opgelost is, laat je geleidelijk oplopen (een passend vervolgalarm uit de lijst, richting hogere prioriteit en uiteindelijk de volgende fase). Grijpt de deelnemer tijdig en correct in, dan de-escaleer je. Baseer het [FASE:n]-token op dit gedrag, niet puur op inschatting (je krijgt tijdens het scenario een verborgen ALARM-STATUS met de werkelijke afhandeling).');
   out.push('- Stuur per beurt maximaal één DCS-alarm.');
+  if(list.some(a => a.kantelpunt)){
+    out.push('- KANTELPUNTEN: de met [KANTELPUNT] gemarkeerde alarmen zijn de beslissende scharnierpunten van dit scenario. Correct en tijdig ingrijpen hierop (bevestigen ÉN oorzaak wegnemen) laat het scenario de-escaleren; ze negeren of niet oplossen laat het culmineren richting rood en de volgende fase.');
+  }
   if(cur.alarmListMode === 'strict'){
     out.push('- MODUS: STRIKT. Gebruik UITSLUITEND alarmen uit het bovenstaande repertoire. Verzin geen andere alarmen, ook niet bij verdere escalatie.');
   } else {
@@ -2604,7 +2609,7 @@ function remPhase(i){ cur.phases.splice(i,1); renderPhases(); dirty(); }
 // ═══════════════════════════════════════════════
 function defAlarm(){
   return { id:'al'+Date.now(), tag:'', omschrijving:'', prioriteit:'oranje',
-           klasse:'proces', herstelactie:'', fase:'', context:'' };
+           klasse:'proces', herstelactie:'', fase:'', context:'', kantelpunt:false };
 }
 
 function renderAlarms(){
@@ -2646,6 +2651,9 @@ function renderAlarms(){
         <select onchange="updateAlarm(${i},'fase',this.value)" style="${iSt}" title="${t('al.fase')}">${opt(faseOpts,a.fase||'')}</select>
         <input value="${esc(a.context)}" placeholder="${t('al.ph_context')}"
           oninput="updateAlarm(${i},'context',this.value)" style="flex:1;${iSt}"/>
+        <label style="display:flex;align-items:center;gap:5px;font-size:12px;white-space:nowrap;cursor:pointer;color:var(--text-dim)" title="${t('al.kantelpunt_hint')}">
+          <input type="checkbox" ${a.kantelpunt?'checked':''} onchange="updateAlarm(${i},'kantelpunt',this.checked)"> ${t('al.kantelpunt')}
+        </label>
       </div>
     </div>`;
   }).join('');
@@ -3010,7 +3018,8 @@ Zodra de briefing is afgerond en de deelnemer gereed is, stuur je [FASE:1] op ee
             id: a.id || ('al'+Math.random().toString(36).slice(2,8)),
             tag: a.tag||'', omschrijving: a.omschrijving||'',
             prioriteit: a.prioriteit||'oranje', klasse: a.klasse||'proces',
-            herstelactie: a.herstelactie||'', fase: a.fase||'', context: a.context||''
+            herstelactie: a.herstelactie||'', fase: a.fase||'', context: a.context||'',
+            kantelpunt: !!a.kantelpunt
           }))
         : [],
       linkedProfileId: cur.linkedProfileId || '',
@@ -3391,6 +3400,8 @@ var T = {
     'al.fase_none':   '— Fase —',
     'al.fase_first':  'Eerste signalen',
     'al.fase_esc':    'Escalatie',
+    'al.kantelpunt':      'Kantelpunt',
+    'al.kantelpunt_hint': 'Beslissend alarm voor escalatie/de-escalatie',
 
     // AI-gedrag / Rollen
     'ai.title':       'AI-gedrag',
@@ -3652,6 +3663,8 @@ var T = {
     'al.fase_none':   '— Phase —',
     'al.fase_first':  'First signals',
     'al.fase_esc':    'Escalation',
+    'al.kantelpunt':      'Tipping point',
+    'al.kantelpunt_hint': 'Decisive alarm for escalation/de-escalation',
 
     // AI-gedrag / Rollen
     'ai.title':       'AI behaviour',
