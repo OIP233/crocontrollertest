@@ -760,6 +760,44 @@ body::before {
 .fd select option { background:#fff; color:var(--input-text); }
 .fd input::placeholder, .fd textarea::placeholder { color:var(--input-text-dim); opacity:.7; }
 
+/* Alarmlijst-editor — zelfde lichte veldstyling en blok-look als de rest van het formulier */
+.al-empty { color:var(--text-2); font-size:13px; padding:6px 2px; }
+.al-card {
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--r-md);
+  padding:14px 16px;
+  margin-bottom:12px;
+  box-shadow:var(--shadow-sm);
+}
+.al-row { display:grid; gap:10px 12px; align-items:end; margin-bottom:10px; }
+.al-row:last-child { margin-bottom:0; }
+.al-r1 { grid-template-columns:160px 1fr 130px 130px auto; }
+.al-r2 { grid-template-columns:1fr; }
+.al-r3 { grid-template-columns:160px 1fr auto; }
+.al-fd { display:flex; flex-direction:column; gap:5px; min-width:0; }
+.al-fd > label { font-family:var(--sans); font-size:11px; font-weight:500; color:var(--text-2); }
+.al-card input, .al-card select {
+  background:var(--input-bg);
+  border:1px solid var(--input-border);
+  border-radius:var(--r-sm);
+  padding:9px 11px;
+  color:var(--input-text);
+  font-family:var(--sans);
+  font-size:14px;
+  outline:none;
+  width:100%;
+  min-height:40px;
+  transition:border-color .15s, box-shadow .15s, background .15s;
+}
+.al-card input:hover, .al-card select:hover { background:var(--input-bg-hover); border-color:var(--input-border-strong); }
+.al-card input:focus, .al-card select:focus { background:var(--input-bg-hover); border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-ring); }
+.al-card input::placeholder { color:var(--input-text-dim); opacity:.7; }
+.al-card select option { background:#fff; color:var(--input-text); }
+.al-kant { display:flex; align-items:center; gap:6px; font-family:var(--sans); font-size:12px; color:var(--text-2); white-space:nowrap; cursor:pointer; min-height:40px; }
+.al-kant input { width:auto; min-height:0; min-width:0; }
+.al-del { align-self:end; }
+
 /* Slider */
 .sw { display:flex; align-items:center; gap:14px; padding:6px 0; }
 .sw input[type=range] { flex:1; background:transparent; border:none; padding:0; min-height:auto; accent-color:var(--accent); height:6px; }
@@ -1804,22 +1842,22 @@ Neutraal en professioneel. Spreekt de deelnemer direct aan met zijn naam. Stelt 
               <label>Prioriteitsindeling — betekenis &amp; verwachte respons per niveau</label>
               <div id="cp-prio-scheme" style="display:flex;flex-direction:column;gap:6px;margin-top:4px">
                 <div style="display:flex;gap:8px;align-items:center">
-                  <span style="flex:0 0 84px;display:flex;align-items:center;gap:7px;font-size:13px"><span style="width:11px;height:11px;border-radius:50%;background:#f1c40f;flex:0 0 auto"></span>Geel</span>
+                  <span style="flex:0 0 84px;display:flex;align-items:center;gap:7px;font-size:13px"><span style="width:11px;height:11px;border-radius:50%;background:#f1c40f;flex:0 0 auto"></span><span id="cp-prio-geel-name">Geel</span></span>
                   <input id="cp-prio-geel-meaning" placeholder="Betekenis (bijv. signalering, geen direct ingrijpen)" oninput="cpDirty()" style="flex:1">
                   <input id="cp-prio-geel-response" placeholder="Verwachte respons" oninput="cpDirty()" style="flex:1">
                 </div>
                 <div style="display:flex;gap:8px;align-items:center">
-                  <span style="flex:0 0 84px;display:flex;align-items:center;gap:7px;font-size:13px"><span style="width:11px;height:11px;border-radius:50%;background:#e67e22;flex:0 0 auto"></span>Oranje</span>
+                  <span style="flex:0 0 84px;display:flex;align-items:center;gap:7px;font-size:13px"><span style="width:11px;height:11px;border-radius:50%;background:#e67e22;flex:0 0 auto"></span><span id="cp-prio-oranje-name">Oranje</span></span>
                   <input id="cp-prio-oranje-meaning" placeholder="Betekenis (bijv. tijdige actie vereist)" oninput="cpDirty()" style="flex:1">
                   <input id="cp-prio-oranje-response" placeholder="Verwachte respons" oninput="cpDirty()" style="flex:1">
                 </div>
                 <div style="display:flex;gap:8px;align-items:center">
-                  <span style="flex:0 0 84px;display:flex;align-items:center;gap:7px;font-size:13px"><span style="width:11px;height:11px;border-radius:50%;background:#e74c3c;flex:0 0 auto"></span>Rood</span>
+                  <span style="flex:0 0 84px;display:flex;align-items:center;gap:7px;font-size:13px"><span style="width:11px;height:11px;border-radius:50%;background:#e74c3c;flex:0 0 auto"></span><span id="cp-prio-rood-name">Rood</span></span>
                   <input id="cp-prio-rood-meaning" placeholder="Betekenis (bijv. onmiddellijk ingrijpen)" oninput="cpDirty()" style="flex:1">
                   <input id="cp-prio-rood-response" placeholder="Verwachte respons" oninput="cpDirty()" style="flex:1">
                 </div>
                 <div style="display:flex;gap:8px;align-items:center">
-                  <span style="flex:0 0 84px;display:flex;align-items:center;gap:7px;font-size:13px"><span style="width:11px;height:11px;border-radius:2px;background:#00bcd4;flex:0 0 auto"></span>Systeem</span>
+                  <span style="flex:0 0 84px;display:flex;align-items:center;gap:7px;font-size:13px"><span style="width:11px;height:11px;border-radius:2px;background:#00bcd4;flex:0 0 auto"></span><span id="cp-prio-systeem-name">Systeem</span></span>
                   <input id="cp-prio-systeem-meaning" placeholder="Betekenis (instrument-/comms-storing)" oninput="cpDirty()" style="flex:1">
                   <input id="cp-prio-systeem-response" placeholder="Verwachte respons" oninput="cpDirty()" style="flex:1">
                 </div>
@@ -2623,37 +2661,38 @@ function renderAlarms(){
   const c = document.getElementById('alarms-list');
   if(!c) return;
   if(!cur.alarmList.length){
-    c.innerHTML = `<div style="color:var(--text-dim);font-size:13px;padding:4px 0">${t('al.none')}</div>`;
+    c.innerHTML = `<div class="al-empty">${t('al.none')}</div>`;
     return;
   }
-  const iSt = 'background:var(--bg3);border:1px solid var(--border-hi);border-radius:4px;padding:6px 10px;color:var(--text-bright);font-family:var(--mono);font-size:13px;outline:none';
   const prioOpts = [['geel','Geel'],['oranje','Oranje'],['rood','Rood']];
   const klasseOpts = [['proces','Proces'],['systeem','Systeem']];
   const faseOpts = [['',t('al.fase_none')],['eerste-signalen',t('al.fase_first')],['escalatie',t('al.fase_esc')]];
   const opt = (pairs,val) => pairs.map(([v,l])=>`<option value="${v}" ${v===val?'selected':''}>${l}</option>`).join('');
 
   c.innerHTML = cur.alarmList.map((a,i)=>{
-    return `<div class="phase-card" id="acard${i}" style="margin-bottom:10px">
-      <div class="phase-hdr" style="gap:8px;flex-wrap:wrap">
-        <input value="${esc(a.tag)}" placeholder="TAG (bijv. LT-204-HH)"
-          oninput="updateAlarm(${i},'tag',this.value)" style="flex:0 0 160px;${iSt}"/>
-        <input value="${esc(a.omschrijving)}" placeholder="${t('al.ph_desc')}"
-          oninput="updateAlarm(${i},'omschrijving',this.value)" style="flex:1;min-width:160px;${iSt}"/>
-        <select onchange="updateAlarm(${i},'prioriteit',this.value)" style="${iSt}" title="${t('al.prio')}">${opt(prioOpts,a.prioriteit||'oranje')}</select>
-        <select onchange="updateAlarm(${i},'klasse',this.value)" style="${iSt}" title="${t('al.klasse')}">${opt(klasseOpts,a.klasse||'proces')}</select>
-        <button class="btn btn-g btn-sm" onclick="remAlarm(${i})" title="${t('roles.delete_title')}">✕</button>
+    return `<div class="al-card" id="acard${i}">
+      <div class="al-row al-r1">
+        <div class="al-fd"><label>${t('al.tag')}</label>
+          <input value="${esc(a.tag)}" placeholder="LT-204-HH" oninput="updateAlarm(${i},'tag',this.value)"></div>
+        <div class="al-fd"><label>${t('al.desc')}</label>
+          <input value="${esc(a.omschrijving)}" placeholder="${t('al.ph_desc')}" oninput="updateAlarm(${i},'omschrijving',this.value)"></div>
+        <div class="al-fd"><label>${t('al.prio')}</label>
+          <select onchange="updateAlarm(${i},'prioriteit',this.value)">${opt(prioOpts,a.prioriteit||'oranje')}</select></div>
+        <div class="al-fd"><label>${t('al.klasse')}</label>
+          <select onchange="updateAlarm(${i},'klasse',this.value)">${opt(klasseOpts,a.klasse||'proces')}</select></div>
+        <button class="btn btn-g btn-sm al-del" onclick="remAlarm(${i})" title="${t('roles.delete_title')}">✕</button>
       </div>
-      <div style="padding:8px 12px 0">
-        <input value="${esc(a.herstelactie)}" placeholder="${t('al.ph_recovery')}"
-          oninput="updateAlarm(${i},'herstelactie',this.value)" style="width:100%;box-sizing:border-box;${iSt}"/>
+      <div class="al-row al-r2">
+        <div class="al-fd"><label>${t('al.recovery')}</label>
+          <input value="${esc(a.herstelactie)}" placeholder="${t('al.ph_recovery')}" oninput="updateAlarm(${i},'herstelactie',this.value)"></div>
       </div>
-      <div style="padding:8px 12px 12px;display:flex;gap:8px;align-items:center">
-        <select onchange="updateAlarm(${i},'fase',this.value)" style="${iSt}" title="${t('al.fase')}">${opt(faseOpts,a.fase||'')}</select>
-        <input value="${esc(a.context)}" placeholder="${t('al.ph_context')}"
-          oninput="updateAlarm(${i},'context',this.value)" style="flex:1;${iSt}"/>
-        <label style="display:flex;align-items:center;gap:5px;font-size:12px;white-space:nowrap;cursor:pointer;color:var(--text-dim)" title="${t('al.kantelpunt_hint')}">
-          <input type="checkbox" ${a.kantelpunt?'checked':''} onchange="updateAlarm(${i},'kantelpunt',this.checked)"> ${t('al.kantelpunt')}
-        </label>
+      <div class="al-row al-r3">
+        <div class="al-fd"><label>${t('al.fase')}</label>
+          <select onchange="updateAlarm(${i},'fase',this.value)">${opt(faseOpts,a.fase||'')}</select></div>
+        <div class="al-fd"><label>${t('al.context')}</label>
+          <input value="${esc(a.context)}" placeholder="${t('al.ph_context')}" oninput="updateAlarm(${i},'context',this.value)"></div>
+        <label class="al-kant" title="${t('al.kantelpunt_hint')}">
+          <input type="checkbox" ${a.kantelpunt?'checked':''} onchange="updateAlarm(${i},'kantelpunt',this.checked)"> ${t('al.kantelpunt')}</label>
       </div>
     </div>`;
   }).join('');
@@ -3319,6 +3358,16 @@ var T = {
     'company.lbl_reporting':   'Meldplicht bij incidenten',
     'company.lbl_alarms':      'Alarmdrempels (richtlijn)',
     'company.lbl_escalation':  'Escalatiestructuur',
+    'company.lbl_alarmnorm':     'Alarmbeheer-norm / alarmfilosofie',
+    'company.lbl_alarmresponse': 'Responswerkwijze bij alarmen',
+    'company.lbl_systemalarm':   'Systeemalarmen-beleid',
+    'company.lbl_shelving':      'Shelving-beleid (tijdelijk onderdrukken)',
+    'company.lbl_authlimits':    'Bevoegdheidsgrenzen',
+    'company.lbl_prioscheme':    'Prioriteitsindeling — betekenis & verwachte respons per niveau',
+    'company.prio_geel':         'Geel',
+    'company.prio_oranje':       'Oranje',
+    'company.prio_rood':         'Rood',
+    'company.prio_systeem':      'Systeem',
     'company.lbl_emergency':   'Calamiteitenorganisatie',
     'company.lbl_procedures':  'Specifieke procedures / bijzonderheden',
     'company.btn_save':        '✓ Profiel opslaan',
@@ -3342,6 +3391,16 @@ var T = {
     'company.ph_reporting':    'bijv. ILT binnen 1u, DCMR binnen 4u',
     'company.ph_alarms':       'bijv. >95% niveau = hoogalarm, <5% = laagalarm',
     'company.ph_escalation':   'bijv. Operator → Shiftleader → Terminal Manager',
+    'company.ph_alarmnorm':     'bijv. EEMUA 191 / ISA-18.2, eigen alarmfilosofie',
+    'company.ph_alarmresponse': 'bijv. bevestigen → diagnose → corrigerende actie → terugmelden',
+    'company.ph_systemalarm':   'bijv. melden aan onderhoud, redundante meting raadplegen, niet zomaar onderdrukken',
+    'company.ph_shelving':      'bijv. alleen met toestemming shiftleader, max. 1 shift, geregistreerd',
+    'company.ph_authlimits':    'bijv. operator tot oranje zelfstandig, rood altijd melden',
+    'company.ph_prio_geel':     'Betekenis (bijv. signalering, geen direct ingrijpen)',
+    'company.ph_prio_oranje':   'Betekenis (bijv. tijdige actie vereist)',
+    'company.ph_prio_rood':     'Betekenis (bijv. onmiddellijk ingrijpen)',
+    'company.ph_prio_systeem':  'Betekenis (instrument-/comms-storing)',
+    'company.ph_prio_response': 'Verwachte respons',
     'company.ph_emergency':    'bijv. BHV, deelname GEVI, eigen brandweer',
     'company.ph_procedures':   'Bijv: verplichte dubbele handtekening bij overpompen...',
     'company.fac_bulk':        'Tankopslag (bulk vloeistoffen)',
@@ -3391,9 +3450,13 @@ var T = {
     // Scenario-alarmlijst (WP2)
     'al.title':       'Alarmlijst (scenario)',
     'al.none':        'Nog geen alarmen. Voeg alarmen toe via de knop hierboven (optioneel).',
-    'al.ph_desc':     'Omschrijving',
-    'al.ph_recovery': 'Herstelactie — operatoractie die de oorzaak wegneemt',
-    'al.ph_context':  'Toelichting / regie-notitie (optioneel)',
+    'al.tag':         'Tag',
+    'al.desc':        'Omschrijving',
+    'al.recovery':    'Herstelactie',
+    'al.context':     'Toelichting',
+    'al.ph_desc':     'bijv. Niveau T-204 zeer hoog',
+    'al.ph_recovery': 'Operatoractie die de oorzaak wegneemt',
+    'al.ph_context':  'Regie-notitie (optioneel)',
     'al.prio':        'Prioriteit',
     'al.klasse':      'Klasse',
     'al.fase':        'Fase',
@@ -3402,6 +3465,11 @@ var T = {
     'al.fase_esc':    'Escalatie',
     'al.kantelpunt':      'Kantelpunt',
     'al.kantelpunt_hint': 'Beslissend alarm voor escalatie/de-escalatie',
+    'al.hint':         'Het alarmrepertoire voor dit scenario. De AI bepaalt zelf wanneer een alarm valt, maar put bij voorkeur uit deze lijst (tag, omschrijving, prioriteit, klasse).',
+    'al.mode_label':   'Modus',
+    'al.mode_soft':    'Soepel — lijst als primair palet, extra alarm mag bij verdere escalatie',
+    'al.mode_strict':  'Strikt — uitsluitend alarmen uit de lijst',
+    'al.classify_lbl': 'Classificatie-stap bij bevestigen — deelnemer kiest proces/systeem (vergeleken met de klasse uit de lijst)',
 
     // AI-gedrag / Rollen
     'ai.title':       'AI-gedrag',
@@ -3582,6 +3650,16 @@ var T = {
     'company.lbl_reporting':   'Incident reporting obligations',
     'company.lbl_alarms':      'Alarm thresholds (guideline)',
     'company.lbl_escalation':  'Escalation structure',
+    'company.lbl_alarmnorm':     'Alarm management standard / philosophy',
+    'company.lbl_alarmresponse': 'Alarm response procedure',
+    'company.lbl_systemalarm':   'System-alarm policy',
+    'company.lbl_shelving':      'Shelving policy (temporary suppression)',
+    'company.lbl_authlimits':    'Authority limits',
+    'company.lbl_prioscheme':    'Priority classification — meaning & expected response per level',
+    'company.prio_geel':         'Yellow',
+    'company.prio_oranje':       'Orange',
+    'company.prio_rood':         'Red',
+    'company.prio_systeem':      'System',
     'company.lbl_emergency':   'Emergency response organisation',
     'company.lbl_procedures':  'Specific procedures / notes',
     'company.btn_save':        '✓ Save profile',
@@ -3605,6 +3683,16 @@ var T = {
     'company.ph_reporting':    'e.g. HSE within 1h, local authority within 4h',
     'company.ph_alarms':       'e.g. >95% level = high alarm, <5% = low alarm',
     'company.ph_escalation':   'e.g. Operator → Shift leader → Terminal Manager',
+    'company.ph_alarmnorm':     'e.g. EEMUA 191 / ISA-18.2, own alarm philosophy',
+    'company.ph_alarmresponse': 'e.g. acknowledge → diagnose → corrective action → report back',
+    'company.ph_systemalarm':   'e.g. report to maintenance, consult redundant measurement, do not simply suppress',
+    'company.ph_shelving':      'e.g. only with shift leader approval, max. 1 shift, logged',
+    'company.ph_authlimits':    'e.g. operator handles up to orange; red always escalate',
+    'company.ph_prio_geel':     'Meaning (e.g. signalling, no immediate action)',
+    'company.ph_prio_oranje':   'Meaning (e.g. timely action required)',
+    'company.ph_prio_rood':     'Meaning (e.g. immediate intervention)',
+    'company.ph_prio_systeem':  'Meaning (instrument/comms fault)',
+    'company.ph_prio_response': 'Expected response',
     'company.ph_emergency':    'e.g. Emergency response team, fire brigade',
     'company.ph_procedures':   'e.g. dual sign-off required for transfer operations...',
     'company.fac_bulk':        'Tank storage (bulk liquids)',
@@ -3654,9 +3742,13 @@ var T = {
     // Scenario alarm list (WP2)
     'al.title':       'Alarm list (scenario)',
     'al.none':        'No alarms yet. Add alarms with the button above (optional).',
-    'al.ph_desc':     'Description',
-    'al.ph_recovery': 'Recovery action — operator action that removes the cause',
-    'al.ph_context':  'Note / direction (optional)',
+    'al.tag':         'Tag',
+    'al.desc':        'Description',
+    'al.recovery':    'Recovery action',
+    'al.context':     'Note',
+    'al.ph_desc':     'e.g. Tank T-204 level very high',
+    'al.ph_recovery': 'Operator action that removes the cause',
+    'al.ph_context':  'Direction note (optional)',
     'al.prio':        'Priority',
     'al.klasse':      'Class',
     'al.fase':        'Phase',
@@ -3665,6 +3757,11 @@ var T = {
     'al.fase_esc':    'Escalation',
     'al.kantelpunt':      'Tipping point',
     'al.kantelpunt_hint': 'Decisive alarm for escalation/de-escalation',
+    'al.hint':         'The alarm repertoire for this scenario. The AI decides when an alarm fires, but draws preferably from this list (tag, description, priority, class).',
+    'al.mode_label':   'Mode',
+    'al.mode_soft':    'Soft — list as primary palette, an extra alarm is allowed on further escalation',
+    'al.mode_strict':  'Strict — only alarms from the list',
+    'al.classify_lbl': 'Classification step on acknowledge — participant picks process/system (compared to the class from the list)',
 
     // AI-gedrag / Rollen
     'ai.title':       'AI behaviour',
@@ -4038,6 +4135,14 @@ function applyLang() {
     });
   }
 
+  // Alarmlijst — statische toelichtingen (hint, modus, classificatie)
+  const setAlTxt = (id, key) => { const e = document.getElementById(id); if (e) e.textContent = t(key); };
+  setAlTxt('al-hint',         'al.hint');
+  setAlTxt('al-mode-label',   'al.mode_label');
+  setAlTxt('al-mode-soft',    'al.mode_soft');
+  setAlTxt('al-mode-strict',  'al.mode_strict');
+  setAlTxt('al-classify-lbl', 'al.classify_lbl');
+
   // Re-render fasen en rollen
   renderPhases();
   renderRoles();
@@ -4067,6 +4172,13 @@ function applyCompanyLang() {
     ['cp-escalation',    'company.lbl_escalation'],
     ['cp-emergency',     'company.lbl_emergency'],
     ['cp-procedures',    'company.lbl_procedures'],
+    // Alarmbeheer & alarmbehandeling
+    ['cp-alarm-norm',     'company.lbl_alarmnorm'],
+    ['cp-alarm-response', 'company.lbl_alarmresponse'],
+    ['cp-system-alarm',   'company.lbl_systemalarm'],
+    ['cp-shelving',       'company.lbl_shelving'],
+    ['cp-auth-limits',    'company.lbl_authlimits'],
+    ['cp-prio-scheme',    'company.lbl_prioscheme'],
   ];
   labelMap.forEach(([id, key]) => setLabel(id, t(key)));
 
@@ -4090,8 +4202,27 @@ function applyCompanyLang() {
     ['cp-escalation',    'company.ph_escalation'],
     ['cp-emergency',     'company.ph_emergency'],
     ['cp-procedures',    'company.ph_procedures'],
+    // Alarmbeheer & alarmbehandeling
+    ['cp-alarm-norm',     'company.ph_alarmnorm'],
+    ['cp-alarm-response', 'company.ph_alarmresponse'],
+    ['cp-system-alarm',   'company.ph_systemalarm'],
+    ['cp-shelving',       'company.ph_shelving'],
+    ['cp-auth-limits',    'company.ph_authlimits'],
+    ['cp-prio-geel-meaning',    'company.ph_prio_geel'],
+    ['cp-prio-oranje-meaning',  'company.ph_prio_oranje'],
+    ['cp-prio-rood-meaning',    'company.ph_prio_rood'],
+    ['cp-prio-systeem-meaning', 'company.ph_prio_systeem'],
+    ['cp-prio-geel-response',    'company.ph_prio_response'],
+    ['cp-prio-oranje-response',  'company.ph_prio_response'],
+    ['cp-prio-rood-response',    'company.ph_prio_response'],
+    ['cp-prio-systeem-response', 'company.ph_prio_response'],
   ];
   phMap.forEach(([id, key]) => setPh(id, t(key)));
+
+  // Prioriteitsschema — rij-namen (Geel/Oranje/Rood/Systeem)
+  [['cp-prio-geel-name','company.prio_geel'],['cp-prio-oranje-name','company.prio_oranje'],
+   ['cp-prio-rood-name','company.prio_rood'],['cp-prio-systeem-name','company.prio_systeem']]
+   .forEach(([id, key]) => { const e = document.getElementById(id); if (e) e.textContent = t(key); });
 
   // Regelgeving checkboxes
   const chkBrzo   = document.getElementById('cp-brzo')?.closest('label');
