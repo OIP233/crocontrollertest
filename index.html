@@ -2993,6 +2993,11 @@ Zet het token ALTIJD als laatste regel van je beurt, op een volledig aparte rege
   })();
 
   const companyContext = buildCompanyContextPrompt(cur.linkedProfileId);
+  // Het volledige bedrijfsprofiel meenemen in de export, zodat het scenario op een
+  // andere PC (waar dit profiel niet lokaal is opgeslagen) bewerkbaar blijft.
+  const linkedProfile = cur.linkedProfileId
+    ? (getProfiles().find(x => x.id === cur.linkedProfileId) || null)
+    : null;
   const alarmRepertoire = buildAlarmRepertoirePrompt();
 
   // Briefing-blok voor het systeem-prompt (alleen Instructeur actief)
@@ -3062,6 +3067,7 @@ Zodra de briefing is afgerond en de deelnemer gereed is, stuur je [FASE:1] op ee
           }))
         : [],
       linkedProfileId: cur.linkedProfileId || '',
+      companyProfile: linkedProfile,
       companyContext: companyContext || '',
       briefing: {
         slideUrl: briefingObj.slideUrl?.trim() || '',
@@ -3215,6 +3221,26 @@ function handleImport(ev){
         _dirOpen:  false
       };
 
+      // Bedrijfsprofiel herstellen: als de export het volledige profiel bevat, voeg het
+      // toe aan de lokale profielen (zodat het op deze PC bewerkbaar/koppelbaar is) en
+      // koppel het. Bestaat er al een profiel met dezelfde id of naam, dan hergebruiken
+      // we dat (geen duplicaat, geen overschrijven van lokale aanpassingen).
+      let importedProfileId = sc.linkedProfileId || '';
+      const impProfile = sc.companyProfile;
+      if (impProfile && typeof impProfile === 'object' && impProfile.name) {
+        const profiles = getProfiles();
+        let existing = profiles.find(p => p.id === impProfile.id)
+                    || profiles.find(p => (p.name||'').toLowerCase() === (impProfile.name||'').toLowerCase());
+        if (existing) {
+          importedProfileId = existing.id;
+        } else {
+          const newProfile = { ...impProfile, id: impProfile.id || ('cp_' + Date.now()) };
+          profiles.unshift(newProfile);
+          putProfiles(profiles);
+          importedProfileId = newProfile.id;
+        }
+      }
+
       cur = {
         id:               sc.scenarioId||'sc_'+Date.now(),
         title:            sc.scenarioTitle||sc.title||'',
@@ -3231,6 +3257,7 @@ function handleImport(ev){
         alarmList:        Array.isArray(sc.alarmList) ? sc.alarmList : [],
         alarmListMode:    (sc.alarmListMode==='strict') ? 'strict' : 'soft',
         alarmClassifyStep: !!sc.alarmClassifyStep,
+        linkedProfileId:  importedProfileId,
         difficulty:       diff,
         aiExtra,
         settings:         sc.settings||{escalation:true,debriefDelay:false},
