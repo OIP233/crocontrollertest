@@ -1633,7 +1633,7 @@ Verwelkom de deelnemer en introduceer het scenario. Geef een korte schets van de
         </div>
 
         <div class="fs">
-          <div class="fst" data-i18n="al.title">Alarmlijst (scenario) <button class="btn btn-g btn-sm" id="btn-add-alarm" onclick="addAlarmRow()" style="margin-left:auto">＋</button></div>
+          <div class="fst" data-i18n="al.title">Alarmlijst (scenario) <button class="btn btn-g btn-sm" id="btn-alarm-lib" onclick="openAlarmLibPicker()" style="margin-left:auto" title="Toevoegen uit alarmbibliotheek">⌕ Uit bibliotheek</button><button class="btn btn-g btn-sm" id="btn-add-alarm" onclick="addAlarmRow()" style="margin-left:8px">＋</button></div>
           <div class="hint-text" id="al-hint" style="margin-bottom:10px">Het alarmrepertoire voor dit scenario. De AI bepaalt zelf wanneer een alarm valt, maar put bij voorkeur uit deze lijst (tag, omschrijving, prioriteit, klasse).</div>
           <div class="fr fr1" style="margin-bottom:8px">
             <div class="fd" style="flex-direction:row;align-items:center;gap:16px">
@@ -1844,6 +1844,18 @@ Neutraal en professioneel. Spreekt de deelnemer direct aan met zijn naam. Stelt 
           </div>
           <div class="fr fr1">
             <div class="fd">
+              <label id="cp-alarmlib-lbl">Alarmbibliotheek (master alarm list, CSV) — herbruikbaar als vulhulp voor scenario-alarmlijsten</label>
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                <button type="button" class="btn btn-g btn-sm" onclick="document.getElementById('cp-alarmlib-file').click()">↑ CSV importeren</button>
+                <input type="file" id="cp-alarmlib-file" accept=".csv,text/csv" style="display:none" onchange="importAlarmLibrary(event)">
+                <span id="cp-alarmlib-status" style="font-size:13px;color:var(--text-2)">Geen bibliotheek geladen</span>
+                <button type="button" class="btn btn-g btn-sm" id="cp-alarmlib-clear" onclick="clearAlarmLibrary()" style="display:none">Wissen</button>
+              </div>
+              <div class="hint-text" style="margin-top:4px">Kolomkoppen: tag, omschrijving, prioriteit, klasse, bron, herstelactie (Engelse varianten herkend). Lokaal verwerkt — niet geüpload.</div>
+            </div>
+          </div>
+          <div class="fr fr1">
+            <div class="fd">
               <label>Prioriteitsindeling — betekenis &amp; verwachte respons per niveau</label>
               <div id="cp-prio-scheme" style="display:flex;flex-direction:column;gap:6px;margin-top:4px">
                 <div style="display:flex;gap:8px;align-items:center">
@@ -2004,6 +2016,19 @@ Neutraal en professioneel. Spreekt de deelnemer direct aan met zijn naam. Stelt 
   </div>
 </div>
 
+<!-- WP6: kiezer alarmbibliotheek -->
+<div id="alarmlib-ov" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.55);align-items:center;justify-content:center;padding:24px">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--shadow-md);width:min(680px,100%);max-height:80vh;display:flex;flex-direction:column;overflow:hidden">
+    <div style="padding:16px 20px;border-bottom:1px solid var(--border);font-family:var(--sans);font-weight:600;color:var(--text-bright)">Alarm uit bibliotheek toevoegen</div>
+    <input id="alarmlib-search" placeholder="Zoeken op tag/omschrijving…" oninput="filterAlarmLibPicker()" style="margin:12px 20px 0;background:var(--input-bg);border:1px solid var(--input-border);border-radius:var(--r-sm);padding:9px 11px;color:var(--input-text);font-family:var(--sans);font-size:14px;outline:none">
+    <div id="alarmlib-list" style="overflow-y:auto;padding:6px 20px;flex:1"></div>
+    <div style="padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn btn-g" onclick="closeAlarmLibPicker()">Annuleren</button>
+      <button class="btn btn-p" onclick="addSelectedFromLib()">Toevoegen</button>
+    </div>
+  </div>
+</div>
+
 <input type="file" id="file-imp" accept=".json" style="display:none" onchange="handleImport(event)">
 
 <script>
@@ -2110,6 +2135,100 @@ function populatePriorityScheme(scheme) {
 
 function cpDirty() { cpDirtyFlag = true; }
 
+// Alarmbibliotheek (WP6): master alarm list per profiel, lokaal in localStorage via het
+// profielobject. Wordt in het formulier los bijgehouden (niet als invoerveld).
+let cpAlarmLibrary = [];
+
+function updateAlarmLibStatus() {
+  const st = document.getElementById('cp-alarmlib-status');
+  const cl = document.getElementById('cp-alarmlib-clear');
+  const n = cpAlarmLibrary.length;
+  if (st) st.textContent = n ? `${n} ${n===1?'alarm':'alarmen'} in bibliotheek` : 'Geen bibliotheek geladen';
+  if (cl) cl.style.display = n ? 'inline-flex' : 'none';
+}
+
+function clearAlarmLibrary() {
+  cpAlarmLibrary = [];
+  updateAlarmLibStatus();
+  cpDirty();
+}
+
+// Minimale, robuuste CSV-parser (quotes, ingesloten scheidingstekens/regeleinden).
+function csvRows(text, delim) {
+  const rows = []; let row = [], field = '', i = 0, inQ = false;
+  while (i < text.length) {
+    const c = text[i];
+    if (inQ) {
+      if (c === '"') { if (text[i+1] === '"') { field += '"'; i += 2; continue; } inQ = false; i++; continue; }
+      field += c; i++; continue;
+    }
+    if (c === '"') { inQ = true; i++; continue; }
+    if (c === delim) { row.push(field); field = ''; i++; continue; }
+    if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; i++; continue; }
+    field += c; i++;
+  }
+  if (field.length || row.length) { row.push(field); rows.push(row); }
+  return rows.filter(r => r.some(c => (c||'').trim() !== ''));
+}
+
+function parseAlarmCSV(text) {
+  text = text.replace(/\r\n?/g, '\n').replace(/^﻿/, '');
+  const firstLine = text.slice(0, text.indexOf('\n') >= 0 ? text.indexOf('\n') : text.length);
+  const delim = (firstLine.split(';').length > firstLine.split(',').length) ? ';' : ',';
+  const rows = csvRows(text, delim);
+  if (rows.length < 2) return [];
+  const headers = rows[0].map(h => (h||'').trim().toLowerCase());
+  const find = (...keys) => { for (const k of keys) { const idx = headers.findIndex(h => h.includes(k)); if (idx >= 0) return idx; } return -1; };
+  const iTag  = find('tag', 'point');
+  const iDesc = find('omschrijving', 'description', 'desc', 'melding', 'message', 'tekst', 'text');
+  const iPrio = find('prioriteit', 'priority', 'prio');
+  const iKls  = find('klasse', 'class');
+  const iBron = find('bron', 'source', 'systeem', 'system');
+  const iRec  = find('herstel', 'recovery', 'correct', 'actie', 'action');
+  const mapPrio = v => { v = (v||'').toLowerCase(); if (/rood|red|hoog|high/.test(v)) return 'rood'; if (/oranje|orange|med/.test(v)) return 'oranje'; if (/geel|yellow|laag|low/.test(v)) return 'geel'; return ''; };
+  const mapKls  = v => /systeem|system|instr|comm|fault/.test((v||'').toLowerCase()) ? 'systeem' : 'proces';
+  const out = [];
+  for (let r = 1; r < rows.length; r++) {
+    const row = rows[r];
+    const get = idx => idx >= 0 ? (row[idx]||'').trim() : '';
+    const tag = get(iTag);
+    if (!tag) continue;
+    out.push({
+      tag,
+      omschrijving: get(iDesc),
+      prioriteit:   mapPrio(get(iPrio)) || 'oranje',
+      klasse:       mapKls(get(iKls)),
+      bron:         get(iBron) || 'DCS',
+      herstelactie: get(iRec),
+    });
+  }
+  return out;
+}
+
+function importAlarmLibrary(ev) {
+  const f = ev.target.files?.[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const parsed = parseAlarmCSV(String(e.target.result || ''));
+      if (!parsed.length) { toast(lang==='en'?'No alarms found in CSV (check column headers)':'Geen alarmen gevonden in CSV (controleer kolomkoppen)','err'); return; }
+      // Ontdubbelen op tag (case-insensitief); bestaande blijven behouden.
+      const have = new Set(cpAlarmLibrary.map(a => (a.tag||'').toLowerCase()));
+      let added = 0;
+      parsed.forEach(a => { const k = a.tag.toLowerCase(); if (!have.has(k)) { have.add(k); cpAlarmLibrary.push(a); added++; } });
+      updateAlarmLibStatus();
+      cpDirty();
+      toast(lang==='en' ? `${added} alarm(s) added to library (${cpAlarmLibrary.length} total)` : `${added} alarm(en) toegevoegd aan bibliotheek (${cpAlarmLibrary.length} totaal)`, 'ok');
+    } catch (err) {
+      console.error('[OIP] alarmlib import', err);
+      toast((lang==='en'?'CSV import failed: ':'CSV-import mislukt: ') + err.message, 'err');
+    }
+    ev.target.value = '';
+  };
+  reader.readAsText(f);
+}
+
 function readCompanyForm() {
   return {
     id: 'cp_' + Date.now(),
@@ -2143,6 +2262,7 @@ function readCompanyForm() {
     systemAlarmPolicy: document.getElementById('cp-system-alarm').value.trim(),
     shelvingPolicy:  document.getElementById('cp-shelving').value.trim(),
     authorityLimits: document.getElementById('cp-auth-limits').value.trim(),
+    alarmLibrary:    cpAlarmLibrary.slice(),
     profileSchemaVersion: PROFILE_SCHEMA_VERSION,
     savedAt:         new Date().toISOString()
   };
@@ -2180,6 +2300,8 @@ function populateCompanyForm(p) {
   document.getElementById('cp-shelving').value        = p.shelvingPolicy||'';
   document.getElementById('cp-auth-limits').value     = p.authorityLimits||'';
   populatePriorityScheme(p.priorityScheme);
+  cpAlarmLibrary = Array.isArray(p.alarmLibrary) ? p.alarmLibrary.slice() : [];
+  updateAlarmLibStatus();
 }
 
 function clearCompanyForm() {
@@ -2190,6 +2312,8 @@ function clearCompanyForm() {
     'cp-alarm-norm','cp-alarm-sources','cp-alarm-response','cp-system-alarm','cp-shelving','cp-auth-limits'];
   fields.forEach(id => document.getElementById(id).value = '');
   populatePriorityScheme(null);
+  cpAlarmLibrary = [];
+  updateAlarmLibStatus();
   document.getElementById('cp-facility-type').value = '';
   document.getElementById('cp-brzo').checked  = false;
   document.getElementById('cp-seveso').checked = false;
@@ -2738,6 +2862,58 @@ function updateAlarm(i,field,val){ cur.alarmList[i][field] = val; dirty(); }
 function setAlarmMode(mode){ cur.alarmListMode = (mode==='strict')?'strict':'soft'; dirty(); }
 
 function setAlarmClassify(on){ cur.alarmClassifyStep = !!on; dirty(); }
+
+// WP6 — kiezer: alarmen toevoegen vanuit de bibliotheek van het gekoppelde profiel.
+function _linkedAlarmLibrary(){
+  const prof = cur.linkedProfileId ? getProfiles().find(p => p.id === cur.linkedProfileId) : null;
+  return (prof && Array.isArray(prof.alarmLibrary)) ? prof.alarmLibrary : [];
+}
+function openAlarmLibPicker(){
+  const lib = _linkedAlarmLibrary();
+  if (!lib.length){ toast(lang==='en'?'No alarm library — link a profile with an imported library first':'Geen alarmbibliotheek — koppel eerst een profiel met een geïmporteerde bibliotheek','err'); return; }
+  const s = document.getElementById('alarmlib-search'); if (s) s.value = '';
+  renderAlarmLibPicker('');
+  document.getElementById('alarmlib-ov').style.display = 'flex';
+}
+function renderAlarmLibPicker(filter){
+  const lib = _linkedAlarmLibrary();
+  const existing = new Set((cur.alarmList||[]).map(a => (a.tag||'').toLowerCase()));
+  const f = (filter||'').toLowerCase();
+  const host = document.getElementById('alarmlib-list');
+  if (!host) return;
+  const rows = lib.filter(a => !f || (`${a.tag} ${a.omschrijving||''}`).toLowerCase().includes(f));
+  host.innerHTML = rows.length ? rows.map(a => {
+    const li  = lib.indexOf(a);
+    const dup = existing.has((a.tag||'').toLowerCase());
+    return `<label style="display:flex;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;${dup?'opacity:.5':''}">
+      <input type="checkbox" data-lib="${li}" ${dup?'disabled':''}>
+      <span style="font-family:var(--mono);min-width:120px;flex-shrink:0">${esc(a.tag)}</span>
+      <span style="flex:1;min-width:0">${esc(a.omschrijving||'')}</span>
+      <span style="color:var(--text-2);font-size:11px;white-space:nowrap">${esc((a.prioriteit||'').toUpperCase())} · ${esc((a.klasse||'').toUpperCase())} · ${esc(a.bron||'DCS')}${dup?' · ('+(lang==='en'?'added':'toegevoegd')+')':''}</span>
+    </label>`;
+  }).join('') : `<div style="color:var(--text-2);font-size:13px;padding:10px 0">${lang==='en'?'Nothing found.':'Niets gevonden.'}</div>`;
+}
+function filterAlarmLibPicker(){ renderAlarmLibPicker(document.getElementById('alarmlib-search').value); }
+function closeAlarmLibPicker(){ const o = document.getElementById('alarmlib-ov'); if (o) o.style.display = 'none'; }
+function addSelectedFromLib(){
+  const lib = _linkedAlarmLibrary();
+  if (!Array.isArray(cur.alarmList)) cur.alarmList = [];
+  const existing = new Set(cur.alarmList.map(a => (a.tag||'').toLowerCase()));
+  let added = 0;
+  document.querySelectorAll('#alarmlib-list input[type="checkbox"]:checked').forEach(cb => {
+    const a = lib[parseInt(cb.dataset.lib)];
+    if (!a) return;
+    const k = (a.tag||'').toLowerCase();
+    if (existing.has(k)) return;
+    existing.add(k);
+    cur.alarmList.push({ ...defAlarm(), id:'al'+Date.now()+'_'+added,
+      tag:a.tag||'', omschrijving:a.omschrijving||'', prioriteit:a.prioriteit||'oranje',
+      klasse:a.klasse||'proces', bron:a.bron||'DCS', herstelactie:a.herstelactie||'' });
+    added++;
+  });
+  closeAlarmLibPicker();
+  if (added){ renderAlarms(); dirty(); toast(lang==='en'?`${added} alarm(s) added`:`${added} alarm(en) toegevoegd`,'ok'); }
+}
 
 // ═══════════════════════════════════════════════
 // ROLLEN
