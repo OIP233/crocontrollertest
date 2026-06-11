@@ -772,7 +772,7 @@ body::before {
 }
 .al-row { display:grid; gap:10px 12px; align-items:end; margin-bottom:10px; }
 .al-row:last-child { margin-bottom:0; }
-.al-r1 { grid-template-columns:160px 1fr 130px 130px auto; }
+.al-r1 { grid-template-columns:150px 1fr 110px 110px 110px auto; }
 .al-r2 { grid-template-columns:1fr; }
 .al-r3 { grid-template-columns:160px 1fr auto; }
 .al-fd { display:flex; flex-direction:column; gap:5px; min-width:0; }
@@ -1838,6 +1838,11 @@ Neutraal en professioneel. Spreekt de deelnemer direct aan met zijn naam. Stelt 
             </div>
           </div>
           <div class="fr fr1">
+            <div class="fd"><label>Alarmbronsystemen (komma-gescheiden)</label>
+              <input id="cp-alarm-sources" placeholder="bijv. DCS, TMS, F&amp;G, CCTV" oninput="cpDirty()">
+            </div>
+          </div>
+          <div class="fr fr1">
             <div class="fd">
               <label>Prioriteitsindeling — betekenis &amp; verwachte respons per niveau</label>
               <div id="cp-prio-scheme" style="display:flex;flex-direction:column;gap:6px;margin-top:4px">
@@ -2132,6 +2137,7 @@ function readCompanyForm() {
     procedures:      document.getElementById('cp-procedures').value.trim(),
     // Alarmbeheer & alarmbehandeling (WP1)
     alarmNorm:       document.getElementById('cp-alarm-norm').value.trim(),
+    alarmSources:    document.getElementById('cp-alarm-sources').value.split(/[,\n;]/).map(s=>s.trim()).filter(Boolean),
     priorityScheme:  readPriorityScheme(),
     alarmResponse:   document.getElementById('cp-alarm-response').value.trim(),
     systemAlarmPolicy: document.getElementById('cp-system-alarm').value.trim(),
@@ -2168,6 +2174,7 @@ function populateCompanyForm(p) {
   document.getElementById('cp-procedures').value      = p.procedures||'';
   // Alarmbeheer & alarmbehandeling (WP1)
   document.getElementById('cp-alarm-norm').value      = p.alarmNorm||'';
+  document.getElementById('cp-alarm-sources').value   = (p.alarmSources||[]).join(', ');
   document.getElementById('cp-alarm-response').value  = p.alarmResponse||'';
   document.getElementById('cp-system-alarm').value    = p.systemAlarmPolicy||'';
   document.getElementById('cp-shelving').value        = p.shelvingPolicy||'';
@@ -2180,7 +2187,7 @@ function clearCompanyForm() {
     'cp-extra-profile','cp-products','cp-capacity','cp-hazards','cp-tank-types',
     'cp-pumps','cp-instruments','cp-dcs','cp-tags','cp-reporting','cp-alarms',
     'cp-escalation','cp-emergency','cp-procedures',
-    'cp-alarm-norm','cp-alarm-response','cp-system-alarm','cp-shelving','cp-auth-limits'];
+    'cp-alarm-norm','cp-alarm-sources','cp-alarm-response','cp-system-alarm','cp-shelving','cp-auth-limits'];
   fields.forEach(id => document.getElementById(id).value = '');
   populatePriorityScheme(null);
   document.getElementById('cp-facility-type').value = '';
@@ -2260,6 +2267,7 @@ function onProfileSelect() {
   cur.linkedProfileId = id;
   dirty();
   updateProfilePreview(id);
+  renderAlarms();   // bron-opties volgen het gekoppelde profiel
 }
 
 function updateProfilePreview(id) {
@@ -2310,6 +2318,7 @@ function buildCompanyContextPrompt(profileId) {
   // ── Alarmbeheer & alarmbehandeling (WP1) ──
   const am = [];
   if (p.alarmNorm) am.push(`${isEN?'Alarm management standard / philosophy':'Alarmbeheer-norm / alarmfilosofie'}: ${p.alarmNorm}`);
+  if (Array.isArray(p.alarmSources) && p.alarmSources.length) am.push(`${isEN?'Alarm source systems':'Alarmbronsystemen'}: ${p.alarmSources.join(', ')}`);
   const prio = (p.priorityScheme || []).filter(r => r && (r.meaning || r.response));
   if (prio.length) {
     am.push(isEN ? 'Priority classification (level → meaning → expected response):'
@@ -2345,7 +2354,8 @@ function buildAlarmRepertoirePrompt(){
   list.forEach(a => {
     const prio   = (a.prioriteit||'oranje').toUpperCase();
     const klasse = (a.klasse||'proces').toUpperCase();
-    out.push(`- ${a.tag||'(geen tag)'} | ${a.omschrijving||''} | PRIORITEIT: ${prio} | KLASSE: ${klasse}`);
+    const bron   = (a.bron||'DCS').toUpperCase();
+    out.push(`- ${a.tag||'(geen tag)'} | ${a.omschrijving||''} | PRIORITEIT: ${prio} | KLASSE: ${klasse} | BRON: ${bron}`);
     if(a.herstelactie) out.push(`  Oorzaak weggenomen door: ${a.herstelactie}`);
     if(a.fase)         out.push(`  [Fase: ${a.fase}]`);
     if(a.context)      out.push(`  [Toelichting: ${a.context}]`);
@@ -2355,8 +2365,8 @@ function buildAlarmRepertoirePrompt(){
   out.push('REGELS VOOR ALARMEN:');
   out.push('- Jij (de AI) bepaalt zelf WANNEER een alarm valt — op basis van het gedrag van de deelnemer en het verloop van het scenario, niet op vaste tijdstippen.');
   out.push('- Stuur een alarm op een aparte regel met exact dit format:');
-  out.push('  [DCS-ALARM] TAG | OMSCHRIJVING | PRIORITEIT: GEEL/ORANJE/ROOD | KLASSE: PROCES/SYSTEEM');
-  out.push('- Neem prioriteit en klasse exact over uit de lijst; wijzig ze niet.');
+  out.push('  [DCS-ALARM] TAG | OMSCHRIJVING | PRIORITEIT: GEEL/ORANJE/ROOD | KLASSE: PROCES/SYSTEEM | BRON: <bronsysteem>');
+  out.push('- Neem prioriteit, klasse én bronsysteem (BRON) exact over uit de lijst; wijzig ze niet. BRON geeft aan uit welk systeem het alarm komt (bijv. DCS, TMS, F&G).');
   out.push('- Zodra de deelnemer de juiste corrigerende actie uitvoert die de oorzaak van een alarm wegneemt (zie "Oorzaak weggenomen door"), stuur je op een aparte regel: [DCS-HERSTEL] TAG. Doe dit NIET wanneer de deelnemer het alarm alleen bevestigt maar de oorzaak niet aanpakt — dan blijft het alarm actief.');
   out.push('- Laat escalatie en de-escalatie afhangen van de WERKELIJKE alarmafhandeling, niet van de tijd. Een alarm dat onbevestigd blijft, of wel bevestigd maar niet opgelost is, laat je geleidelijk oplopen (een passend vervolgalarm uit de lijst, richting hogere prioriteit en uiteindelijk de volgende fase). Grijpt de deelnemer tijdig en correct in, dan de-escaleer je. Baseer het [FASE:n]-token op dit gedrag, niet puur op inschatting (je krijgt tijdens het scenario een verborgen ALARM-STATUS met de werkelijke afhandeling).');
   out.push('- Stuur per beurt maximaal één DCS-alarm.');
@@ -2647,7 +2657,16 @@ function remPhase(i){ cur.phases.splice(i,1); renderPhases(); dirty(); }
 // ═══════════════════════════════════════════════
 function defAlarm(){
   return { id:'al'+Date.now(), tag:'', omschrijving:'', prioriteit:'oranje',
-           klasse:'proces', herstelactie:'', fase:'', context:'', kantelpunt:false };
+           klasse:'proces', bron:'DCS', herstelactie:'', fase:'', context:'', kantelpunt:false };
+}
+
+// Beschikbare alarmbronsystemen voor dit scenario: uit het gekoppelde bedrijfsprofiel,
+// anders een zinvolle standaardlijst. 'DCS' staat altijd vooraan.
+function getScenarioAlarmSources(){
+  const p = cur.linkedProfileId ? getProfiles().find(x => x.id === cur.linkedProfileId) : null;
+  let list = (p && Array.isArray(p.alarmSources) && p.alarmSources.length) ? p.alarmSources.slice() : ['DCS','TMS','F&G','CCTV'];
+  if (!list.some(s => (s||'').toUpperCase() === 'DCS')) list.unshift('DCS');
+  return list;
 }
 
 function renderAlarms(){
@@ -2668,6 +2687,12 @@ function renderAlarms(){
   const klasseOpts = [['proces','Proces'],['systeem','Systeem']];
   const faseOpts = [['',t('al.fase_none')],['eerste-signalen',t('al.fase_first')],['escalatie',t('al.fase_esc')]];
   const opt = (pairs,val) => pairs.map(([v,l])=>`<option value="${v}" ${v===val?'selected':''}>${l}</option>`).join('');
+  const bronList = getScenarioAlarmSources();
+  const bronOpt = (val) => {
+    const arr = bronList.slice();
+    if (val && !arr.some(s => s === val)) arr.unshift(val);   // huidige waarde behouden
+    return arr.map(s => `<option value="${esc(s)}" ${s===val?'selected':''}>${esc(s)}</option>`).join('');
+  };
 
   c.innerHTML = cur.alarmList.map((a,i)=>{
     return `<div class="al-card" id="acard${i}">
@@ -2680,6 +2705,8 @@ function renderAlarms(){
           <select onchange="updateAlarm(${i},'prioriteit',this.value)">${opt(prioOpts,a.prioriteit||'oranje')}</select></div>
         <div class="al-fd"><label>${t('al.klasse')}</label>
           <select onchange="updateAlarm(${i},'klasse',this.value)">${opt(klasseOpts,a.klasse||'proces')}</select></div>
+        <div class="al-fd"><label>${t('al.bron')}</label>
+          <select onchange="updateAlarm(${i},'bron',this.value)">${bronOpt(a.bron||'DCS')}</select></div>
         <button class="btn btn-g btn-sm al-del" onclick="remAlarm(${i})" title="${t('roles.delete_title')}">✕</button>
       </div>
       <div class="al-row al-r2">
@@ -3062,6 +3089,7 @@ Zodra de briefing is afgerond en de deelnemer gereed is, stuur je [FASE:1] op ee
             id: a.id || ('al'+Math.random().toString(36).slice(2,8)),
             tag: a.tag||'', omschrijving: a.omschrijving||'',
             prioriteit: a.prioriteit||'oranje', klasse: a.klasse||'proces',
+            bron: a.bron||'DCS',
             herstelactie: a.herstelactie||'', fase: a.fase||'', context: a.context||'',
             kantelpunt: !!a.kantelpunt
           }))
@@ -3386,6 +3414,8 @@ var T = {
     'company.lbl_alarms':      'Alarmdrempels (richtlijn)',
     'company.lbl_escalation':  'Escalatiestructuur',
     'company.lbl_alarmnorm':     'Alarmbeheer-norm / alarmfilosofie',
+    'company.lbl_alarmsources':  'Alarmbronsystemen (komma-gescheiden)',
+    'company.ph_alarmsources':   'bijv. DCS, TMS, F&G, CCTV',
     'company.lbl_alarmresponse': 'Responswerkwijze bij alarmen',
     'company.lbl_systemalarm':   'Systeemalarmen-beleid',
     'company.lbl_shelving':      'Shelving-beleid (tijdelijk onderdrukken)',
@@ -3486,6 +3516,7 @@ var T = {
     'al.ph_context':  'Regie-notitie (optioneel)',
     'al.prio':        'Prioriteit',
     'al.klasse':      'Klasse',
+    'al.bron':        'Bron',
     'al.fase':        'Fase',
     'al.fase_none':   '— Fase —',
     'al.fase_first':  'Eerste signalen',
@@ -3678,6 +3709,8 @@ var T = {
     'company.lbl_alarms':      'Alarm thresholds (guideline)',
     'company.lbl_escalation':  'Escalation structure',
     'company.lbl_alarmnorm':     'Alarm management standard / philosophy',
+    'company.lbl_alarmsources':  'Alarm source systems (comma-separated)',
+    'company.ph_alarmsources':   'e.g. DCS, TMS, F&G, CCTV',
     'company.lbl_alarmresponse': 'Alarm response procedure',
     'company.lbl_systemalarm':   'System-alarm policy',
     'company.lbl_shelving':      'Shelving policy (temporary suppression)',
@@ -3778,6 +3811,7 @@ var T = {
     'al.ph_context':  'Direction note (optional)',
     'al.prio':        'Priority',
     'al.klasse':      'Class',
+    'al.bron':        'Source',
     'al.fase':        'Phase',
     'al.fase_none':   '— Phase —',
     'al.fase_first':  'First signals',
@@ -4201,6 +4235,7 @@ function applyCompanyLang() {
     ['cp-procedures',    'company.lbl_procedures'],
     // Alarmbeheer & alarmbehandeling
     ['cp-alarm-norm',     'company.lbl_alarmnorm'],
+    ['cp-alarm-sources',  'company.lbl_alarmsources'],
     ['cp-alarm-response', 'company.lbl_alarmresponse'],
     ['cp-system-alarm',   'company.lbl_systemalarm'],
     ['cp-shelving',       'company.lbl_shelving'],
@@ -4231,6 +4266,7 @@ function applyCompanyLang() {
     ['cp-procedures',    'company.ph_procedures'],
     // Alarmbeheer & alarmbehandeling
     ['cp-alarm-norm',     'company.ph_alarmnorm'],
+    ['cp-alarm-sources',  'company.ph_alarmsources'],
     ['cp-alarm-response', 'company.ph_alarmresponse'],
     ['cp-system-alarm',   'company.ph_systemalarm'],
     ['cp-shelving',       'company.ph_shelving'],
