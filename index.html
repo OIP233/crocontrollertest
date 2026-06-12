@@ -1638,7 +1638,7 @@ Verwelkom de deelnemer en introduceer het scenario. Geef een korte schets van de
           <div class="fr fr1" style="margin-bottom:8px">
             <div class="fd" style="flex-direction:row;align-items:center;gap:16px">
               <label id="al-mode-label" style="flex-shrink:0">Modus</label>
-              <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="radio" name="al-mode" value="soft" onchange="setAlarmMode('soft')"> <span id="al-mode-soft">Soepel — lijst als primair palet, extra alarm mag bij verdere escalatie</span></label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="radio" name="al-mode" value="soft" onchange="setAlarmMode('soft')"> <span id="al-mode-soft">Soepel — lijst als kernalarmen, AI vult actief aan met extra alarmen</span></label>
               <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="radio" name="al-mode" value="strict" onchange="setAlarmMode('strict')"> <span id="al-mode-strict">Strikt — uitsluitend alarmen uit de lijst</span></label>
             </div>
           </div>
@@ -2473,7 +2473,7 @@ function buildAlarmRepertoirePrompt(){
   out.push(sep);
   out.push('BESCHIKBAAR ALARMREPERTOIRE (scenario-alarmlijst)');
   out.push(sep);
-  out.push('Hieronder de alarmen die in dit scenario kunnen optreden. Gebruik bij voorkeur deze tags, omschrijvingen, prioriteiten en klassen — verzin geen eigen tagnamen.');
+  out.push('Hieronder de alarmen die in dit scenario kunnen optreden. Neem voor alarmen uit deze lijst de tags, omschrijvingen, prioriteiten en klassen exact over — verzin voor déze alarmen geen eigen tagnamen.');
   out.push('');
   list.forEach(a => {
     const prio   = (a.prioriteit||'oranje').toUpperCase();
@@ -2493,14 +2493,16 @@ function buildAlarmRepertoirePrompt(){
   out.push('- Neem prioriteit, klasse én bronsysteem (BRON) exact over uit de lijst; wijzig ze niet. BRON geeft aan uit welk systeem het alarm komt (bijv. DCS, TMS, F&G).');
   out.push('- Zodra de deelnemer de juiste corrigerende actie uitvoert die de oorzaak van een alarm wegneemt (zie "Oorzaak weggenomen door"), stuur je op een aparte regel: [DCS-HERSTEL] TAG. Doe dit NIET wanneer de deelnemer het alarm alleen bevestigt maar de oorzaak niet aanpakt — dan blijft het alarm actief.');
   out.push('- Laat escalatie en de-escalatie afhangen van de WERKELIJKE alarmafhandeling, niet van de tijd. Een alarm dat onbevestigd blijft, of wel bevestigd maar niet opgelost is, laat je geleidelijk oplopen (een passend vervolgalarm uit de lijst, richting hogere prioriteit en uiteindelijk de volgende fase). Grijpt de deelnemer tijdig en correct in, dan de-escaleer je. Baseer het [FASE:n]-token op dit gedrag, niet puur op inschatting (je krijgt tijdens het scenario een verborgen ALARM-STATUS met de werkelijke afhandeling).');
-  out.push('- Stuur per beurt maximaal één DCS-alarm.');
   if(list.some(a => a.kantelpunt)){
     out.push('- KANTELPUNTEN: de met [KANTELPUNT] gemarkeerde alarmen zijn de beslissende scharnierpunten van dit scenario. Correct en tijdig ingrijpen hierop (bevestigen ÉN oorzaak wegnemen) laat het scenario de-escaleren; ze negeren of niet oplossen laat het culmineren richting rood en de volgende fase.');
   }
   if(cur.alarmListMode === 'strict'){
+    out.push('- Stuur per beurt maximaal één DCS-alarm.');
     out.push('- MODUS: STRIKT. Gebruik UITSLUITEND alarmen uit het bovenstaande repertoire. Verzin geen andere alarmen, ook niet bij verdere escalatie.');
   } else {
-    out.push('- MODUS: SOEPEL. Gebruik het bovenstaande repertoire als primair palet. Alleen als de situatie duidelijk verder escaleert dan de lijst dekt, mag je een passend extra alarm toevoegen — volg dan het prioriteits- en klassenschema uit de BEDRIJFSCONTEXT.');
+    out.push('- Stuur per beurt maximaal twee à drie DCS-alarmen; spreid ze over de beurt en laat niet elke beurt het maximum vallen.');
+    out.push('- MODUS: SOEPEL. De lijst is het primaire palet voor de KERNALARMEN van het verhaal — zet die in op de beslissende momenten. Genereer daarnaast ACTIEF extra alarmen die NIET in de lijst staan: achtergrond- en randalarmen uit nevensystemen, kleine procesafwijkingen en systeemmeldingen die de controlekamer realistisch druk en dynamisch maken. Richtlijn: over het hele scenario ruwweg evenveel extra alarmen als lijstalarmen, vooral GEEL en ORANJE; reserveer ROOD hoofdzakelijk voor de lijstalarmen zodat de kern van het verhaal herkenbaar blijft.');
+    out.push('- Voor extra (niet-lijst)alarmen verzin je zelf een passende tag in dezelfde naamgevingsstijl als de lijst en volg je het prioriteits- en klassenschema uit de BEDRIJFSCONTEXT. Ook deze alarmen herstel je met [DCS-HERSTEL] TAG zodra de oorzaak is weggenomen of de afwijking vanzelf normaliseert.');
   }
   return out.join('\n');
 }
@@ -3701,7 +3703,7 @@ var T = {
     'al.kantelpunt_hint': 'Beslissend alarm voor escalatie/de-escalatie',
     'al.hint':         'Het alarmrepertoire voor dit scenario. De AI bepaalt zelf wanneer een alarm valt, maar put bij voorkeur uit deze lijst (tag, omschrijving, prioriteit, klasse).',
     'al.mode_label':   'Modus',
-    'al.mode_soft':    'Soepel — lijst als primair palet, extra alarm mag bij verdere escalatie',
+    'al.mode_soft':    'Soepel — lijst als kernalarmen, AI vult actief aan met extra alarmen',
     'al.mode_strict':  'Strikt — uitsluitend alarmen uit de lijst',
     'al.classify_lbl': 'Classificatie-stap bij bevestigen — deelnemer kiest proces/systeem (vergeleken met de klasse uit de lijst)',
 
@@ -3996,7 +3998,7 @@ var T = {
     'al.kantelpunt_hint': 'Decisive alarm for escalation/de-escalation',
     'al.hint':         'The alarm repertoire for this scenario. The AI decides when an alarm fires, but draws preferably from this list (tag, description, priority, class).',
     'al.mode_label':   'Mode',
-    'al.mode_soft':    'Soft — list as primary palette, an extra alarm is allowed on further escalation',
+    'al.mode_soft':    'Soft — list as core alarms, AI actively adds extra alarms',
     'al.mode_strict':  'Strict — only alarms from the list',
     'al.classify_lbl': 'Classification step on acknowledge — participant picks process/system (compared to the class from the list)',
 
